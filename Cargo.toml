@@ -1,0 +1,12 @@
+[package]
+name = "markovify"
+version = "0.1.0"
+authors = ["Connor Hilarides <connorcpu@live.com>"]
+
+[dependencies]
+rand = "*"
+regex = "*"
+regex_macros = "*"
+bincode = "*"
+tweetust = "*"
+rustc-serialize = "*"
