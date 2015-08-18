@@ -1,4 +1,4 @@
-#![feature(plugin)]
+#![feature(plugin, slice_patterns, convert)]
 #![plugin(regex_macros)]
 
 extern crate rand;
@@ -7,8 +7,8 @@ extern crate rustc_serialize;
 extern crate bincode;
 
 use std::fs::File;
-use std::io::{self, Read, Write};
-use training::{Trainer, StrTrainer};
+use std::io::{self, Write, BufReader, BufRead};
+use training::{Trainer, StrTrainer, MultilineTrainer};
 
 pub mod chain;
 pub mod training;
@@ -50,7 +50,7 @@ fn handle_input(input: &String, chain: &mut chain::Chain) {
         }
         Some("train") => {
             if let Some(data) = split.get(1) {
-                let trainer = StrTrainer::new(&data);
+                let mut trainer = StrTrainer::new(&data);
                 trainer.train(chain);
 
                 save_chain(chain);
@@ -61,12 +61,17 @@ fn handle_input(input: &String, chain: &mut chain::Chain) {
         }
         Some("train-file") => {
             if let Some(filename) = split.get(1) {
-                if let Ok(mut file) = File::open(filename) {
-                    let mut data = String::new();
-                    file.read_to_string(&mut data).unwrap();
+                if let Ok(file) = File::open(filename) {
+                    let mut line = String::new();
+                    let mut trainer = MultilineTrainer::new(chain);
 
-                    let trainer = StrTrainer::new(&data);
-                    trainer.train(chain);
+                    let mut reader = BufReader::new(file);
+                    while let Ok(n) = reader.read_line(&mut line) {
+                        if n == 0 { break; }
+
+                        trainer.next(&line).train(chain);
+                        line.clear();
+                    }
 
                     save_chain(chain);
                     println!("saved!");
@@ -80,19 +85,40 @@ fn handle_input(input: &String, chain: &mut chain::Chain) {
         Some("train-lines") => {
             let stdin = io::stdin();
             let mut line = String::new();
-            while let Ok(_) = stdin.read_line(&mut line) {
-                if line.find("<<<") == Some(0) {
+            let mut trainer = MultilineTrainer::new(chain);
+            while let Ok(n) = stdin.read_line(&mut line) {
+                if n == 0 || line.find("<<<") == Some(0) {
                     break;
-                } else {
-                    let trainer = StrTrainer::new(&line);
-                    trainer.train(chain);
                 }
+
+                trainer.next(&line).train(chain);
 
                 line.clear();
             }
 
             save_chain(chain);
             println!("saved!");
+        }
+        Some("list-choices") => {
+            if let Some(args) = split.get(1) {
+                let args: Vec<_> = args.split_whitespace().collect();
+                if let [arg0, arg1, arg2] = args.as_slice() {
+                    let lookup = (arg0, arg1, arg2);
+                    if let Some(choices) = chain.lookup_choices(lookup) {
+                        for choice in choices.choices.iter() {
+                            let name = chain.get_name(choice.item).unwrap();
+                            println!("{:?} {} | weight: {}", lookup, name, choice.weight);
+                        }
+                    } else {
+                        println!("I've never seen that combination! You should tell me more :3");
+                    }
+                } else {
+                    println!("Please specify 3 words");
+                }
+            } else {
+                println!("Usage: list-choices word0 word1 word2");
+                println!("Use \"\" to represent the beginning");
+            }
         }
         cmd => {
             if let Some(cmd) = cmd {

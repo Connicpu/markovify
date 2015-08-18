@@ -15,6 +15,8 @@ pub struct WordId(u32);
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, RustcEncodable, RustcDecodable)]
 pub struct State(WordId, WordId, WordId);
 
+pub type ChoiceLookup<'a> = (&'a str, &'a str, &'a str);
+
 #[derive(Clone, RustcEncodable, RustcDecodable)]
 pub struct Chain {
     words: Vec<String>,
@@ -27,16 +29,16 @@ struct MarkovGraph {
     edges: HashMap<State, Choices>,
 }
 
-#[derive(Default, Clone, RustcEncodable, RustcDecodable)]
-struct Choices {
-    choices: Vec<ChoiceWeight>,
-    total: u32,
+#[derive(Default, Debug, Clone, RustcEncodable, RustcDecodable)]
+pub struct Choices {
+    pub choices: Vec<ChoiceWeight>,
+    pub total: u32,
 }
 
-#[derive(Clone, RustcEncodable, RustcDecodable)]
-struct ChoiceWeight {
-    item: WordId,
-    weight: u32,
+#[derive(Clone, Debug, RustcEncodable, RustcDecodable)]
+pub struct ChoiceWeight {
+    pub item: WordId,
+    pub weight: u32,
 }
 
 impl State {
@@ -53,6 +55,7 @@ impl Chain {
             word_lookup: {
                 let mut map = HashMap::new();
                 map.insert("".into(), WordId(0));
+                map.insert("\"\"".into(), WordId(0));
                 map
             },
             graph: Default::default()
@@ -81,6 +84,28 @@ impl Chain {
 
     pub fn find_word(&self, word: &str) -> Option<WordId> {
         self.word_lookup.get(word).cloned()
+    }
+
+    pub fn get_name(&self, word: WordId) -> Option<&str> {
+        self.words.get(word.0 as usize).map(|s| s as &str)
+    }
+
+    pub fn lookup_choices<'a, 'b>(&'a self, prefix: ChoiceLookup<'b>) -> Option<&Choices> {
+        match (self.find_word(prefix.0), self.find_word(prefix.1), self.find_word(prefix.2)) {
+            (Some(w0), Some(w1), Some(w2)) => self.graph.edges.get(&State(w0, w1, w2)),
+            result => {
+                if result.0 == None {
+                    println!("I don't know {}", prefix.0);
+                }
+                if result.1 == None {
+                    println!("I don't know {}", prefix.1);
+                }
+                if result.2 == None {
+                    println!("I don't know {}", prefix.2);
+                }
+                None
+            }
+        }
     }
 
     pub fn train_choice(&mut self, prefix: State, suffix: WordId) {
@@ -148,6 +173,10 @@ impl Chain {
 
     pub fn load<R: Read>(&mut self, reader: &mut R) {
         replace(self, decode_from(reader, Infinite).unwrap());
+
+        if self.find_word("\"\"") == None {
+            self.word_lookup.insert("\"\"".into(), WordId(0));
+        }
     }
 
     pub fn clear_empty(&mut self) {
