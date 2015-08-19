@@ -36,9 +36,12 @@ fn generate(chain: &chain::Chain, num_sentences: usize, max_words: usize) {
     println!("");
 }
 
-fn handle_input(input: &String, chain: &mut chain::Chain) {
+fn handle_input(input: &String, chain: &mut chain::Chain) -> bool {
     let split: Vec<_> = input.splitn(2, ' ').collect();
     match split.get(0).cloned() {
+        Some("quit") => {
+            return false;
+        }
         Some("generate") => {
             let mut words = 50;
             if let Some(args) = split.get(1) {
@@ -127,7 +130,8 @@ fn handle_input(input: &String, chain: &mut chain::Chain) {
                 println!("Please type a command");
             }
         }
-    }
+    };
+    true
 }
 
 fn main() {
@@ -145,7 +149,9 @@ fn main() {
     while let Ok(_) = stdin.read_line(&mut input) {
         input = newline.replace(&input, "");
 
-        handle_input(&input, &mut chain);
+        if !handle_input(&input, &mut chain) {
+            return;
+        }
 
         input.clear();
         print!("> ");
