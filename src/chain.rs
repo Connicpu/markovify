@@ -9,10 +9,14 @@ use rand::thread_rng;
 use bincode::rustc_serialize::{encode_into, decode_from};
 use bincode::SizeLimit::Infinite;
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, RustcEncodable, RustcDecodable)]
+#[derive(Copy, Clone, Debug, Hash)]
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
+#[derive(RustcEncodable, RustcDecodable)]
 pub struct WordId(u32);
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, RustcEncodable, RustcDecodable)]
+#[derive(Copy, Clone, Debug, Hash)]
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
+#[derive(RustcEncodable, RustcDecodable)]
 pub struct State(WordId, WordId, WordId);
 
 pub type ChoiceLookup<'a> = (&'a str, &'a str, &'a str);

@@ -51,13 +51,14 @@ fn handle_input(input: &String, chain: &mut chain::Chain) -> bool {
             }
             generate(chain, 1, words);
         }
+        Some("save") => {
+            save_chain(chain);
+            println!("saved!");
+        }
         Some("train") => {
             if let Some(data) = split.get(1) {
                 let mut trainer = StrTrainer::new(&data);
                 trainer.train(chain);
-
-                save_chain(chain);
-                println!("saved!");
             } else {
                 println!("Why not give me a sentence to train from?");
             }
@@ -75,9 +76,6 @@ fn handle_input(input: &String, chain: &mut chain::Chain) -> bool {
                         trainer.next(&line).train(chain);
                         line.clear();
                     }
-
-                    save_chain(chain);
-                    println!("saved!");
                 } else {
                     println!("I couldn't find {}", filename);
                 }
@@ -98,9 +96,6 @@ fn handle_input(input: &String, chain: &mut chain::Chain) -> bool {
 
                 line.clear();
             }
-
-            save_chain(chain);
-            println!("saved!");
         }
         Some("list-choices") => {
             if let Some(args) = split.get(1) {
