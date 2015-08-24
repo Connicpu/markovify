@@ -199,6 +199,11 @@ impl Chain {
             begin.total -= amount;
         }
     }
+
+    pub fn print_stats(&self) {
+        println!("Vocabulary: {} words", self.words.len());
+        println!("Known prefixes: {}", self.graph.edges.len());
+    }
 }
 
 impl Default for Chain {
