@@ -36,7 +36,6 @@ pub enum AuthType {
 }
 
 impl tweetust::conn::Authenticator for AuthType {
-
     fn send_request(&self, method: Method, url: &str, params: &[Parameter]) -> Result<Response> {
         use self::AuthType::*;
         match self {
