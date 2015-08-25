@@ -1,4 +1,4 @@
-#![feature(plugin, slice_patterns, convert)]
+#![feature(plugin, slice_patterns, convert, str_utf16)]
 #![plugin(regex_macros)]
 
 extern crate rand;
@@ -7,6 +7,11 @@ extern crate rustc_serialize;
 extern crate bincode;
 extern crate tweetust;
 extern crate hyper;
+
+#[cfg(windows)]
+extern crate winapi;
+#[cfg(windows)]
+extern crate ole32;
 
 use std::fs::{self, File};
 use std::io::{self, Write, BufReader, BufRead};
@@ -20,6 +25,12 @@ use bincode::SizeLimit::Infinite;
 pub mod chain;
 pub mod training;
 pub mod twitter;
+
+#[cfg(windows)]
+pub mod tts;
+#[cfg(not(windows))]
+#[path(file = "nop_tts.rs")]
+pub mod tts;
 
 fn handle_input(input: &String, chain: &mut chain::Chain) -> bool {
     let split: Vec<_> = input.splitn(2, ' ').collect();
@@ -176,6 +187,10 @@ fn handle_input(input: &String, chain: &mut chain::Chain) -> bool {
 
 fn main() {
     let mut chain = load_chain();
+
+    let mut speechify = tts::Speechifier::new();
+    speechify.start();
+    speechify.queue("Hello, world!".into());
 
     chain.clear_empty();
 

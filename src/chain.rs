@@ -73,11 +73,11 @@ impl Chain {
 
     pub fn push_word(&mut self, word: &str) -> WordId {
         if let Some(&id) = self.word_lookup.get(word) {
-            return id
+            return id;
         }
 
-        if self.words.len() > std::u32::MAX as usize {
-
+        if self.words.len() >= std::u32::MAX as usize {
+            panic!("TOO MANY WORDS! AHHHHH! HOW DID YOU MANAGE THAT?!");
         }
 
         let id = WordId(self.words.len() as u32);
@@ -115,7 +115,9 @@ impl Chain {
     pub fn train_choice(&mut self, prefix: State, suffix: WordId) {
         let choices = self.graph.edges.entry(prefix).or_insert(Default::default());
 
-        let needs_push = if let Some(choice) = choices.choices.iter_mut().find(|weighted| weighted.item == suffix) {
+        let needs_push = if let Some(choice) = choices.choices
+                .iter_mut()
+                .find(|weighted| weighted.item == suffix) {
             choice.weight += 1;
             false
         } else {

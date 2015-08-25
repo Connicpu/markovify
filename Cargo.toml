@@ -11,3 +11,11 @@ bincode = "*"
 tweetust = "*"
 hyper = "*"
 rustc-serialize = "*"
+
+[dependencies.winapi]
+path = "../winapi-rs"
+version = "*"
+
+[dependencies.ole32-sys]
+path = "../winapi-rs/lib/ole32-sys"
+version = "*"
