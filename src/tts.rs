@@ -117,7 +117,7 @@ unsafe fn speech_loop(rx: Receiver<SpeechMessage>, voice: &mut winapi::ISpVoice)
             return;
         }
 
-        voice.Speak(&buffer[0], 0, ptr::null_mut());
+        voice.Speak(buffer.as_ptr(), 0, ptr::null_mut());
         voice.WaitUntilDone(winapi::INFINITE);
 
         buffer.clear();
