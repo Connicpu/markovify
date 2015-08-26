@@ -5,7 +5,7 @@ use std::io::{Read, Write};
 use std::mem::replace;
 use rand::distributions::Sample;
 use rand::distributions::range::Range;
-use rand::thread_rng;
+use rand::{Rng, thread_rng};
 use bincode::rustc_serialize::{encode_into, decode_from};
 use bincode::SizeLimit::Infinite;
 
@@ -43,6 +43,12 @@ pub struct Choices {
 pub struct ChoiceWeight {
     pub item: WordId,
     pub weight: u32,
+}
+
+pub struct GeneratingIterator<'a> {
+    state: State,
+    rng: ::rand::ThreadRng,
+    chain: &'a Chain,
 }
 
 impl State {
@@ -134,6 +140,43 @@ impl Chain {
         choices.total += 1;
     }
 
+    pub fn iter(&self) -> GeneratingIterator {
+        GeneratingIterator {
+            state: self.begin(),
+            rng: thread_rng(),
+            chain: self,
+        }
+    }
+
+    pub fn next_word<'a, R: Rng>(&'a self, state: &mut State, rng: &mut R) -> Option<&'a str> {
+        let choices = match self.graph.edges.get(&state) {
+            Some(choices) => choices,
+            None => return None,
+        };
+
+        if choices.choices.len() == 0 {
+            return None;
+        }
+
+        let mut range = Range::new(0, choices.total);
+        let mut selector = range.sample(rng);
+
+        let mut choice_idx = 0;
+        for (i, v) in choices.choices.iter().enumerate() {
+            if selector < v.weight {
+                choice_idx = i;
+                break;
+            }
+
+            selector -= v.weight;
+        }
+
+        let choice = choices.choices[choice_idx].item;
+        state.push(choice);
+
+        Some(&self.words[choice.0 as usize])
+    }
+
     pub fn generate_sequence(&self, max_length: usize) -> String {
         let mut sequence = String::new();
 
@@ -141,33 +184,13 @@ impl Chain {
         let mut state = self.begin();
 
         for _ in 0..max_length {
-            let choices = match self.graph.edges.get(&state) {
-                Some(choices) => choices,
+            let word = match self.next_word(&mut state, &mut rng) {
+                Some(word) => word,
                 None => break,
             };
 
-            if choices.choices.len() == 0 {
-                break;
-            }
-
-            let mut range = Range::new(0, choices.total);
-            let mut selector = range.sample(&mut rng);
-
-            let mut choice_idx = 0;
-            for (i, v) in choices.choices.iter().enumerate() {
-                if selector < v.weight {
-                    choice_idx = i;
-                    break;
-                }
-
-                selector -= v.weight;
-            }
-
-            let choice = choices.choices[choice_idx].item;
-
-            sequence = sequence + &self.words[choice.0 as usize];
+            sequence = sequence + word;
             sequence.push(' ');
-            state.push(choice);
         }
 
         sequence
@@ -211,5 +234,12 @@ impl Chain {
 impl Default for Chain {
     fn default() -> Self {
         Chain::new()
+    }
+}
+
+impl<'a> Iterator for GeneratingIterator<'a> {
+    type Item = &'a str;
+    fn next(&mut self) -> Option<&'a str> {
+        self.chain.next_word(&mut self.state, &mut self.rng)
     }
 }

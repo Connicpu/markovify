@@ -18,6 +18,7 @@ use std::io::{self, Write, BufReader, BufRead};
 use std::path::{Path, PathBuf};
 use std::convert::AsRef;
 use std::fmt::Debug;
+use std::iter::Extend;
 use training::{Trainer, StrTrainer, MultilineTrainer};
 use bincode::rustc_serialize::{encode_into, decode_from};
 use bincode::SizeLimit::Infinite;
@@ -49,6 +50,28 @@ fn handle_input(input: &String, chain: &mut chain::Chain) -> bool {
                 }
             }
             generate(chain, 1, words);
+        }
+        Some("speechify") => {
+            let sentence_end = regex!(r"[\.\?!]");
+
+            let mut speechify = tts::Speechifier::new();
+            speechify.start();
+
+            let mut buffer = String::new();
+            for word in chain.iter() {
+                buffer.extend(word.chars());
+                buffer.push(' ');
+
+                if sentence_end.is_match(word) {
+                    speechify.queue(buffer.clone());
+                    buffer.clear();
+                }
+
+                print!("{} ", word);
+                io::stdout().flush().unwrap();
+            }
+
+            speechify.stop();
         }
         Some("save") => {
             save_chain(chain);
@@ -187,10 +210,6 @@ fn handle_input(input: &String, chain: &mut chain::Chain) -> bool {
 
 fn main() {
     let mut chain = load_chain();
-
-    let mut speechify = tts::Speechifier::new();
-    speechify.start();
-    speechify.queue("Hello, world!".into());
 
     chain.clear_empty();
 

@@ -23,7 +23,7 @@ impl Speechifier {
     }
 
     pub fn start(&mut self) {
-        let (tx, rx) = sync_channel(64);
+        let (tx, rx) = sync_channel(0);
         self.mailbox = Some(tx);
 
         thread::spawn(move || {
@@ -81,6 +81,7 @@ unsafe fn speechify(rx: Receiver<SpeechMessage>) {
     );
 
     if succeeded(hr) {
+        (*voice).SetRate(2);
         speech_loop(rx, &mut *voice);
         (*voice).Release();
     }
@@ -93,10 +94,6 @@ unsafe fn speech_loop(rx: Receiver<SpeechMessage>, voice: &mut winapi::ISpVoice)
     loop {
         if let Ok(Word(word)) = rx.recv() {
             buffer.extend(word.utf16_units());
-            while let Ok(Word(word)) = rx.try_recv() {
-                buffer.push(b' ' as u16);
-                buffer.extend(word.utf16_units());
-            }
             buffer.push(0);
         } else {
             return;
