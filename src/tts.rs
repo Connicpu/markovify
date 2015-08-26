@@ -2,8 +2,11 @@ use winapi;
 use ole32;
 use std::iter::Extend;
 use std::mem;
+use std::ptr;
 use std::thread;
 use std::sync::mpsc::{sync_channel, SyncSender, Receiver};
+use std::ffi::OsStr;
+use std::os::windows::ffi::OsStrExt;
 use self::SpeechMessage::*;
 
 pub struct Speechifier {
@@ -56,17 +59,32 @@ fn succeeded(hr: winapi::HRESULT) -> bool {
     !failed(hr)
 }
 
+pub trait ToWide {
+    fn to_wide(&self) -> Vec<u16>;
+    fn to_wide_null(&self) -> Vec<u16>;
+}
+
+impl<T> ToWide for T where T: AsRef<OsStr> {
+    fn to_wide(&self) -> Vec<u16> {
+        self.as_ref().encode_wide().collect()
+    }
+    fn to_wide_null(&self) -> Vec<u16> {
+        self.as_ref().encode_wide().chain(Some(0)).collect()
+    }
+}
+
 unsafe fn speechify(rx: Receiver<SpeechMessage>) {
     let mut hr;
-    let mut voice: *mut winapi::ISpVoice = mem::zeroed();
+    let mut voice: *mut winapi::ISpVoice = ptr::null_mut();
 
-    hr = ole32::CoInitialize(mem::zeroed());
+    hr = ole32::CoInitialize(ptr::null_mut());
     if failed(hr) {
         return;
     }
 
-    let sp_voice: Vec<_> = "SAPI.SpVoice\0".utf16_units().collect();
-    let mut clsid_spvoice: winapi::CLSID = mem::zeroed();
+    let sp_voice = "SAPI.SpVoice".to_wide_null();
+    let mut clsid_spvoice: winapi::CLSID = mem::uninitialized();
+
     hr = ole32::CLSIDFromProgID(&sp_voice[0], &mut clsid_spvoice);
     if failed(hr) {
         return;
@@ -74,7 +92,7 @@ unsafe fn speechify(rx: Receiver<SpeechMessage>) {
 
     hr = ole32::CoCreateInstance(
         &clsid_spvoice,
-        mem::zeroed(),
+        ptr::null_mut(),
         winapi::CLSCTX_ALL,
         &winapi::UuidOfISpVoice,
         &mut voice as *mut *mut winapi::ISpVoice as *mut *mut winapi::c_void
@@ -99,7 +117,7 @@ unsafe fn speech_loop(rx: Receiver<SpeechMessage>, voice: &mut winapi::ISpVoice)
             return;
         }
 
-        voice.Speak(&buffer[0], 0, mem::zeroed());
+        voice.Speak(&buffer[0], 0, ptr::null_mut());
         voice.WaitUntilDone(winapi::INFINITE);
 
         buffer.clear();
