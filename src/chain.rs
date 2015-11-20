@@ -68,7 +68,7 @@ impl Chain {
                 map.insert("\"\"".into(), WordId(0));
                 map
             },
-            graph: Default::default()
+            graph: Default::default(),
         }
     }
 
@@ -101,7 +101,9 @@ impl Chain {
     }
 
     pub fn lookup_choices<'a, 'b>(&'a self, prefix: ChoiceLookup<'b>) -> Option<&'a Choices> {
-        match (self.find_word(prefix.0), self.find_word(prefix.1), self.find_word(prefix.2)) {
+        match (self.find_word(prefix.0),
+               self.find_word(prefix.1),
+               self.find_word(prefix.2)) {
             (Some(w0), Some(w1), Some(w2)) => self.graph.edges.get(&State(w0, w1, w2)),
             result => {
                 if result.0 == None {
@@ -122,8 +124,8 @@ impl Chain {
         let choices = self.graph.edges.entry(prefix).or_insert(Default::default());
 
         let needs_push = if let Some(choice) = choices.choices
-                .iter_mut()
-                .find(|weighted| weighted.item == suffix) {
+                                                      .iter_mut()
+                                                      .find(|weighted| weighted.item == suffix) {
             choice.weight += 1;
             false
         } else {
@@ -133,7 +135,7 @@ impl Chain {
         if needs_push {
             choices.choices.push(ChoiceWeight {
                 item: suffix,
-                weight: 1
+                weight: 1,
             });
         }
 
