@@ -11,9 +11,7 @@ pub struct StrTrainer<'a> {
 
 impl<'a> StrTrainer<'a> {
     pub fn new(data: &'a str) -> Self {
-        StrTrainer {
-            data: data
-        }
+        StrTrainer { data: data }
     }
 }
 
@@ -39,9 +37,7 @@ pub struct MultilineEntry<'a, 'b> {
 
 impl MultilineTrainer {
     pub fn new(chain: &Chain) -> Self {
-        MultilineTrainer {
-            state: chain.begin(),
-        }
+        MultilineTrainer { state: chain.begin() }
     }
 
     pub fn next<'a, 'b>(&'b mut self, data: &'a str) -> MultilineEntry<'a, 'b> {

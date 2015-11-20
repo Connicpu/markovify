@@ -20,9 +20,7 @@ enum SpeechMessage {
 
 impl Speechifier {
     pub fn new() -> Speechifier {
-        Speechifier {
-            mailbox: None,
-        }
+        Speechifier { mailbox: None }
     }
 
     pub fn start(&mut self) {
@@ -30,7 +28,9 @@ impl Speechifier {
         self.mailbox = Some(tx);
 
         thread::spawn(move || {
-            unsafe { speechify(rx); }
+            unsafe {
+                speechify(rx);
+            }
         });
     }
 
