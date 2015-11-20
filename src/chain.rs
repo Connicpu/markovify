@@ -100,7 +100,7 @@ impl Chain {
         self.words.get(word.0 as usize).map(|s| s as &str)
     }
 
-    pub fn lookup_choices<'a, 'b>(&'a self, prefix: ChoiceLookup<'b>) -> Option<&Choices> {
+    pub fn lookup_choices<'a, 'b>(&'a self, prefix: ChoiceLookup<'b>) -> Option<&'a Choices> {
         match (self.find_word(prefix.0), self.find_word(prefix.1), self.find_word(prefix.2)) {
             (Some(w0), Some(w1), Some(w2)) => self.graph.edges.get(&State(w0, w1, w2)),
             result => {
