@@ -5,8 +5,6 @@ extern crate rand;
 extern crate regex;
 extern crate rustc_serialize;
 extern crate bincode;
-extern crate tweetust;
-extern crate hyper;
 
 #[cfg(windows)]
 extern crate winapi;
@@ -20,12 +18,9 @@ use std::convert::AsRef;
 use std::fmt::Debug;
 use std::iter::Extend;
 use training::{Trainer, StrTrainer, MultilineTrainer};
-use bincode::rustc_serialize::{encode_into, decode_from};
-use bincode::SizeLimit::Infinite;
 
 pub mod chain;
 pub mod training;
-pub mod twitter;
 
 #[cfg(windows)]
 pub mod tts;
@@ -142,61 +137,6 @@ fn handle_input(input: &String, chain: &mut chain::Chain) -> bool {
                 println!("Use \"\" to represent the beginning");
             }
         }
-        Some("init-twitter") => {
-            if let Some(args) = split.get(1) {
-                let args: Vec<_> = args.split_whitespace().collect();
-                if let [key, secret] = args.as_slice() {
-                    make_twitter(key.into(), secret.into());
-                    return true;
-                }
-            }
-
-            println!("Usage: init-twitter [key] [secret]");
-        }
-        Some("twitter-auth-app") => {
-            if let Some(mut client) = load_twitter() {
-                if let Err(e) = client.authenticate_app() {
-                    println!("{:?}", e);
-                } else {
-                    save_twitter(&client);
-                }
-            } else {
-                println!("You need to run init-twitter first");
-            }
-        }
-        Some("twitter-search") => {
-            let client = match load_twitter() {
-                Some(client) => match client.get_client() {
-                    Some(client) => client,
-                    None => {
-                        println!("You need to authenticate twitter first");
-                        return true;
-                    }
-                },
-                None => {
-                    println!("You need to initialize twitter first");
-                    return true;
-                }
-            };
-
-            if let Some(query) = split.get(1) {
-                let result = match client.search().tweets(query).lang("en").count(25).execute() {
-                    Ok(result) => result.object,
-                    Err(e) => {
-                        println!("{:?}", e);
-                        return true;
-                    }
-                };
-
-                let mut trainer = MultilineTrainer::new(chain);
-                for status in result.statuses.iter() {
-                    println!("{}", status.text);
-                    trainer.next(&status.text).train(chain);
-                }
-            } else {
-                println!("Usage: twitter-search [query]");
-            }
-        }
         cmd => {
             if let Some(cmd) = cmd {
                 println!("I don't know what `{}` means", cmd);
@@ -308,29 +248,5 @@ fn all_files<F>(folder: &str, pattern: &regex::Regex, mut cb: F) where F: FnMut(
                 cb(entry.path());
             }
         }
-    }
-}
-
-fn make_twitter(key: String, secret: String) -> twitter::TwitterTrainer {
-    let client = twitter::TwitterTrainer::new(key, secret);
-    save_twitter(&client);
-    client
-}
-
-fn save_twitter(client: &twitter::TwitterTrainer) {
-    let mut file = File::create("twitter.markov").unwrap();
-    let data = client.get_save_data();
-    encode_into(&data, &mut file, Infinite).unwrap();
-}
-
-fn load_twitter() -> Option<twitter::TwitterTrainer> {
-    let mut file = match File::open("twitter.markov") {
-        Ok(file) => file,
-        Err(_) => return None,
-    };
-
-    match decode_from(&mut file, Infinite) {
-        Ok(data) => Some(twitter::TwitterTrainer::from_data(data)),
-        Err(_) => None,
     }
 }
